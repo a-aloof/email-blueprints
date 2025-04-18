@@ -48,6 +48,7 @@ st.set_page_config(page_title="Article Analyzer", layout="centered")
 
 st.title("📊 Article Analyzer")
 st.markdown("Analyze your article for structure, read time, and keyword density.")
+st.markdown("Written by Random Dude for LCA.")
 
 article = st.text_area("📄 Paste your article here:", height=400)
 
