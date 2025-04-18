@@ -1,49 +1,74 @@
-import streamlit as st
+ import streamlit as st
 import re
-from collections import Counter
 
-def analyze_text(article, keywords):
-    # Clean article
-    article_clean = article.strip()
+# ---------- Text Analysis Functions ----------
 
-    # Count metrics
-    word_list = re.findall(r'\b\w+\b', article_clean.lower())
-    char_count = len(article_clean)
-    word_count = len(word_list)
-    sentence_count = len(re.findall(r'[.!?]+', article_clean))
-    paragraph_count = len(article_clean.split('\n\n'))
+def count_words(text):
+    return len(re.findall(r'\b\w+\b', text))
 
-    # Keyword processing
-    keyword_counts = Counter(word_list)
-    keyword_data = {}
-    for kw in keywords:
-        kw_lower = kw.lower()
-        count = keyword_counts[kw_lower]
+def count_characters(text):
+    return len(text)
+
+def count_sentences(text):
+    return len(re.findall(r'[.!?]+', text))
+
+def count_paragraphs(text):
+    return len([p for p in text.split('\n') if p.strip()])
+
+def analyze_keywords(text, keywords):
+    keyword_stats = []
+    word_count = count_words(text)
+
+    for keyword in keywords:
+        # Normalize text and keyword
+        pattern = re.escape(keyword.lower())
+        matches = re.findall(r'\b' + pattern + r'\b', text.lower())
+        count = len(matches)
         density = (count / word_count) * 100 if word_count else 0
-        keyword_data[kw] = {"count": count, "density": round(density, 2)}
 
-    return word_count, char_count, sentence_count, paragraph_count, keyword_data
+        keyword_stats.append({
+            'keyword': keyword,
+            'count': count,
+            'density': round(density, 2)
+        })
 
+    return keyword_stats
 
-# Streamlit UI
-st.title("📝 Article Analyzer")
+# ---------- Streamlit App Layout ----------
 
-article = st.text_area("Paste your article here", height=300)
-keywords_input = st.text_input("Enter keywords (comma-separated)")
+st.set_page_config(page_title="Article Analyzer", layout="centered")
+
+st.title("📊 Article Analyzer")
+st.markdown("Analyze your article for structure and keyword density.")
+
+article = st.text_area("📄 Paste your article here:", height=400)
+
+keywords_input = st.text_area("🔍 Enter keywords (one per line):", height=150)
 
 if st.button("Analyze"):
-    if article and keywords_input:
-        keywords = [k.strip() for k in keywords_input.split(",")]
-        word_count, char_count, sentence_count, paragraph_count, keyword_data = analyze_text(article, keywords)
+    if not article.strip():
+        st.warning("Please paste an article.")
+    else:
+        keywords = [kw.strip() for kw in keywords_input.split('\n') if kw.strip()]
+        
+        # Metrics
+        word_count = count_words(article)
+        char_count = count_characters(article)
+        sentence_count = count_sentences(article)
+        paragraph_count = count_paragraphs(article)
+        keyword_stats = analyze_keywords(article, keywords)
 
-        st.subheader("📊 Text Analysis")
+        # ---------- Results ----------
+
+        st.subheader("📈 Text Analysis")
         st.write(f"**Word Count:** {word_count}")
         st.write(f"**Character Count:** {char_count}")
         st.write(f"**Sentence Count:** {sentence_count}")
         st.write(f"**Paragraph Count:** {paragraph_count}")
 
-        st.subheader("🔍 Keyword Analysis")
-        for kw, data in keyword_data.items():
-            st.write(f"**{kw}** — Occurrences: {data['count']}, Density: {data['density']}%")
-    else:
-        st.warning("Please paste the article and enter at least one keyword.")
+        st.subheader("🔎 Keyword Analysis")
+        if keyword_stats:
+            for stat in keyword_stats:
+                st.markdown(f"**{stat['keyword']}** — Occurrences: {stat['count']}, Density: {stat['density']}%")
+        else:
+            st.info("No keywords provided.")
