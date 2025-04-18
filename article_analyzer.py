@@ -1,6 +1,8 @@
- import streamlit as st
+import streamlit as st
 import re
 import math
+import pandas as pd
+import altair as alt
 
 # ---------- Text Analysis Functions ----------
 
@@ -17,14 +19,12 @@ def count_paragraphs(text):
     return len([p for p in text.split('\n') if p.strip()])
 
 def estimate_read_time(text):
-    words_per_minute = 200  # Average reading speed
-    total_words = count_words(text)
-    return math.ceil(total_words / words_per_minute)
+    words_per_minute = 200
+    return math.ceil(count_words(text) / words_per_minute)
 
 def analyze_keywords(text, keywords):
     keyword_stats = []
     word_count = count_words(text)
-
     total_density = 0.0
 
     for keyword in keywords:
@@ -59,17 +59,15 @@ if st.button("Analyze"):
     else:
         keywords = [kw.strip() for kw in keywords_input.split('\n') if kw.strip()]
 
-        # Text metrics
         word_count = count_words(article)
         char_count = count_characters(article)
         sentence_count = count_sentences(article)
         paragraph_count = count_paragraphs(article)
         read_time = estimate_read_time(article)
 
-        # Keyword stats
         keyword_stats, total_density = analyze_keywords(article, keywords)
 
-        # ---------- Results ----------
+        # ---------- Results Display ----------
 
         st.subheader("📈 Text Analysis")
         st.write(f"**Word Count:** {word_count}")
@@ -82,6 +80,19 @@ if st.button("Analyze"):
         if keyword_stats:
             for stat in keyword_stats:
                 st.markdown(f"**{stat['keyword']}** — Occurrences: {stat['count']}, Density: {stat['density']}%")
+
             st.markdown(f"**📊 Total Combined Keyword Density:** {total_density}%")
+
+            # Chart Visualization
+            df = pd.DataFrame(keyword_stats)
+            chart = alt.Chart(df).mark_bar().encode(
+                x=alt.X('keyword', sort='-y', title='Keyword'),
+                y=alt.Y('count', title='Occurrences'),
+                tooltip=['keyword', 'count', 'density']
+            ).properties(
+                title='Keyword Occurrence Chart',
+                width=600
+            )
+            st.altair_chart(chart, use_container_width=True)
         else:
             st.info("No keywords provided.")
