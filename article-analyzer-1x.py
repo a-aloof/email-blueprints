@@ -46,7 +46,7 @@ st.markdown("Analyze your article for readability, keyword frequency, and densit
 
 with st.form("analyzer_form"):
     article = st.text_area("Paste your Article here", height=300)
-    keywords_input = st.text_input("Enter keywords (comma-separated)", "Supply Chain, Material Handling, Inventory")
+    keywords_input = st.text_input("Enter keywords (comma-separated)", "")
     submitted = st.form_submit_button("🔍 Analyze")
 
 if submitted:
