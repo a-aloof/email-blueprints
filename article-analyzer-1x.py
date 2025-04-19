@@ -7,7 +7,6 @@ def clean_text(text):
     return re.sub(r'\s+', ' ', text.strip())
 
 def count_words(text):
-    # QuillBot-style: split on spaces but exclude markdown symbols and punctuation
     words = re.findall(r'\b\w+\b', text)
     return len(words)
 
@@ -22,15 +21,15 @@ def count_paragraphs(text):
     return len([p for p in text.split("\n") if p.strip()])
 
 def keyword_analysis(text, keywords):
-    word_list = re.findall(r'\b\w+\b', text.lower())
-    total_words = len(word_list)
+    text_lower = text.lower()
+    total_words = len(re.findall(r'\b\w+\b', text_lower))
     keyword_counts = {}
     for kw in keywords:
         kw_clean = kw.lower().strip()
-        count = word_list.count(kw_clean)
+        count = text_lower.count(kw_clean)
         keyword_counts[kw] = {
             "count": count,
-            "density": round((count / total_words) * 100, 2) if total_words > 0 else 0
+            "density": round((count * len(kw_clean.split()) / total_words) * 100, 2) if total_words > 0 else 0
         }
     return keyword_counts, total_words
 
@@ -46,7 +45,7 @@ st.markdown("Analyze your article for readability, keyword frequency, and densit
 
 with st.form("analyzer_form"):
     article = st.text_area("Paste your Article here", height=300)
-    keywords_input = st.text_input("Enter keywords (comma-separated)", "")
+    keywords_input = st.text_input("Enter keywords (comma-separated)", "Supply Chain Consultant Company, Material Handling Services, Optimal Inventory Management")
     submitted = st.form_submit_button("🔍 Analyze")
 
 if submitted:
