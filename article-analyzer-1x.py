@@ -39,15 +39,19 @@ def estimate_read_time(word_count):
     return round(word_count / avg_read_speed, 2)
 
 # --- Streamlit UI ---
+st.set_page_config(page_title="Article Analyzer", page_icon="📊", layout="centered")
+
 st.title("📊 Article Analyzer")
+st.markdown("Analyze your article for readability, keyword frequency, and density in one click.")
 
-article = st.text_area("Paste your Article here", height=400)
+with st.form("analyzer_form"):
+    article = st.text_area("Paste your Article here", height=300)
+    keywords_input = st.text_input("Enter keywords (comma-separated)", "Supply Chain, Material Handling, Inventory")
+    submitted = st.form_submit_button("🔍 Analyze")
 
-keywords_input = st.text_input("Enter keywords (comma-separated)", "Supply Chain, Material Handling, Inventory")
-
-if st.button("Analyze"):
+if submitted:
     if not article.strip():
-        st.warning("Please paste an article first.")
+        st.warning("⚠️ Please paste an article first.")
     else:
         cleaned_text = clean_text(article)
         word_count = count_words(cleaned_text)
@@ -63,19 +67,23 @@ if st.button("Analyze"):
 
         # --- Display Results ---
         st.header("📈 Article Stats")
-        st.write(f"**Word Count:** {word_count}")
-        st.write(f"**Character Count:** {char_count}")
-        st.write(f"**Sentence Count:** {sentence_count}")
-        st.write(f"**Paragraph Count:** {paragraph_count}")
-        st.write(f"**Estimated Read Time:** {read_time} min")
-        st.write(f"**Total Keyword Density:** {total_keyword_density}%")
+        col1, col2, col3 = st.columns(3)
+        col1.metric("Words", word_count)
+        col2.metric("Characters", char_count)
+        col3.metric("Sentences", sentence_count)
+
+        col4, col5 = st.columns(2)
+        col4.metric("Paragraphs", paragraph_count)
+        col5.metric("Read Time (min)", read_time)
+
+        st.success(f"📌 Total Keyword Density: {total_keyword_density}%")
 
         st.header("🔍 Keyword Analysis")
         df = pd.DataFrame([
             {"Keyword": kw, "Count": data['count'], "Density (%)": data['density']}
             for kw, data in keyword_data.items()
         ])
-        st.dataframe(df)
+        st.dataframe(df, use_container_width=True)
 
         st.subheader("📊 Keyword Frequency Chart")
         chart_data = pd.DataFrame({
@@ -84,3 +92,7 @@ if st.button("Analyze"):
         })
         chart_data = chart_data.set_index("Keyword")
         st.bar_chart(chart_data)
+
+        st.divider()
+        if st.button("🔄 Start Over"):
+            st.experimental_rerun()
