@@ -1,64 +1,86 @@
 import streamlit as st
 import re
-from collections import Counter
-import matplotlib.pyplot as plt
-import string
+import pandas as pd
 
-# ----------- FUNCTIONS -----------
+# --- Helper Functions ---
+def clean_text(text):
+    return re.sub(r'\s+', ' ', text.strip())
 
-def quillbot_style_word_count(text):
-    # Strip markdown, punctuation and count real words
-    text_clean = re.sub(r'(\*\*|__|##+|[*`~_>\[\]()!#])', '', text)  # remove markdown
-    words = re.findall(r"\b[\w'-]+\b", text)  # more liberal than split()
-    return len(words), words
+def count_words(text):
+    # QuillBot-style: split on spaces but exclude markdown symbols and punctuation
+    words = re.findall(r'\b\w+\b', text)
+    return len(words)
 
-def calculate_reading_time(word_count, wpm=250):
-    minutes = word_count / wpm
-    return round(minutes, 2)
+def count_characters(text):
+    return len(text)
 
-def compute_keyword_density(words):
-    lower_words = [word.lower() for word in words]
-    word_counts = Counter(lower_words)
-    total_words = len(words)
-    density = {word: round((count / total_words) * 100, 2) for word, count in word_counts.items()}
-    return word_counts, density
+def count_sentences(text):
+    sentences = re.findall(r'[^.!?]+[.!?]', text)
+    return len(sentences)
 
-def plot_keyword_chart(word_counts, top_n=10):
-    common = word_counts.most_common(top_n)
-    words, counts = zip(*common)
-    fig, ax = plt.subplots()
-    ax.bar(words, counts, color='skyblue')
-    plt.xticks(rotation=45)
-    plt.title(f"Top {top_n} Keywords")
-    plt.xlabel("Keyword")
-    plt.ylabel("Frequency")
-    st.pyplot(fig)
+def count_paragraphs(text):
+    return len([p for p in text.split("\n") if p.strip()])
 
-# ----------- STREAMLIT UI -----------
+def keyword_analysis(text, keywords):
+    word_list = re.findall(r'\b\w+\b', text.lower())
+    total_words = len(word_list)
+    keyword_counts = {}
+    for kw in keywords:
+        kw_clean = kw.lower().strip()
+        count = word_list.count(kw_clean)
+        keyword_counts[kw] = {
+            "count": count,
+            "density": round((count / total_words) * 100, 2) if total_words > 0 else 0
+        }
+    return keyword_counts, total_words
 
-st.title("📝 Article Analyzer (QuillBot Style)")
+def estimate_read_time(word_count):
+    avg_read_speed = 200  # words per minute
+    return round(word_count / avg_read_speed, 2)
 
-article_text = st.text_area("Paste your article here:", height=400)
+# --- Streamlit UI ---
+st.title("📊 Article Analyzer")
 
-if article_text:
-    # Word Count
-    word_count, words = quillbot_style_word_count(article_text)
-    st.write(f"**Word Count (QuillBot style):** {word_count}")
+article = st.text_area("Paste your Article here", height=400)
 
-    # Reading Time
-    read_time = calculate_reading_time(word_count)
-    st.write(f"**Estimated Reading Time:** {read_time} minutes")
+keywords_input = st.text_input("Enter keywords (comma-separated)", "Supply Chain, Material Handling, Inventory")
 
-    # Keyword Density
-    word_freqs, word_density = compute_keyword_density(words)
-    total_keywords = len(word_freqs)
-    st.write(f"**Total Unique Keywords:** {total_keywords}")
+if st.button("Analyze"):
+    if not article.strip():
+        st.warning("Please paste an article first.")
+    else:
+        cleaned_text = clean_text(article)
+        word_count = count_words(cleaned_text)
+        char_count = count_characters(cleaned_text)
+        sentence_count = count_sentences(cleaned_text)
+        paragraph_count = count_paragraphs(article)
 
-    # Show top keywords
-    top_keywords = dict(word_freqs.most_common(10))
-    st.subheader("🔑 Top Keyword Frequency")
-    st.write(top_keywords)
+        keywords = [kw.strip() for kw in keywords_input.split(",") if kw.strip()]
+        keyword_data, total_words = keyword_analysis(cleaned_text, keywords)
 
-    # Plot Chart
-    st.subheader("📊 Keyword Frequency Chart")
-    plot_keyword_chart(word_freqs)
+        total_keyword_density = round(sum(k['density'] for k in keyword_data.values()), 2)
+        read_time = estimate_read_time(word_count)
+
+        # --- Display Results ---
+        st.header("📈 Article Stats")
+        st.write(f"**Word Count:** {word_count}")
+        st.write(f"**Character Count:** {char_count}")
+        st.write(f"**Sentence Count:** {sentence_count}")
+        st.write(f"**Paragraph Count:** {paragraph_count}")
+        st.write(f"**Estimated Read Time:** {read_time} min")
+        st.write(f"**Total Keyword Density:** {total_keyword_density}%")
+
+        st.header("🔍 Keyword Analysis")
+        df = pd.DataFrame([
+            {"Keyword": kw, "Count": data['count'], "Density (%)": data['density']}
+            for kw, data in keyword_data.items()
+        ])
+        st.dataframe(df)
+
+        st.subheader("📊 Keyword Frequency Chart")
+        chart_data = pd.DataFrame({
+            'Keyword': [kw for kw in keyword_data],
+            'Frequency': [keyword_data[kw]['count'] for kw in keyword_data]
+        })
+        chart_data = chart_data.set_index("Keyword")
+        st.bar_chart(chart_data)
