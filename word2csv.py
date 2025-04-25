@@ -6,7 +6,7 @@ import re
 
 # Set Streamlit page settings
 st.set_page_config(page_title="Shopify Catalog Generator ", layout="wide")
-st.title("🛍️ Shopify Product Catalog Generator by Random Dude")
+st.title("🛍️ Shopify Product Catalog Generator by foxbat")
 st.write("Upload a Word (.docx) file containing product details and get a clean CSV for Shopify.")
 
 # Upload widget
